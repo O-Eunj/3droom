@@ -6,13 +6,15 @@ import { ChevronLeft, Lock, Download, Quote, Check, Plus, Box, ChevronRight } fr
 export default function App() {
   const [step, setStep] = useState('intro');
   const [roomSize, setRoomSize] = useState(7);
+  const [roomType, setRoomType] = useState('A');
+  const [floorColor, setFloorColor] = useState('wood');
   const [viewMode, setViewMode] = useState('2d');
   const [placedItems, setPlacedItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const dialogRef = useRef(null);
   const furnitureListRef = useRef(null);
   const [furnitureScroll, setFurnitureScroll] = useState(0);
-  const roomDim = roomDimensions(roomSize);
+  const roomDim = roomDimensions(roomSize, roomType);
   const [modalState, setModalState] = useState({ isOpen: false, type: '' });
 
   const handleAddToRoom = (catalogItem) => {
@@ -36,10 +38,11 @@ export default function App() {
     setPlacedItems(items => items.filter(item => item.uid !== uid));
     setSelectedId(null);
   };
-  const changeRoomSize = size => {
-    const nextRoom = roomDimensions(size);
+  const changeRoomSize = (size, type = roomType) => {
+    const nextRoom = roomDimensions(size, type);
     setPlacedItems(items => items.map(item => constrainItem({ ...item, x: item.x * nextRoom.width / roomDim.width, y: item.y * nextRoom.height / roomDim.height }, nextRoom)));
     setRoomSize(size);
+    setRoomType(type);
   };
 
   const triggerAppModal = (type) => {
@@ -151,10 +154,12 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex justify-center gap-2">
+            <div className="room-options-row">
+              <span className="option-label">평수</span>
               {[5, 7, 10].map((size) => (
                 <button
                   key={size}
+                  aria-pressed={roomSize === size}
                   onClick={() => changeRoomSize(size)}
                   className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all border ${
                     roomSize === size 
@@ -165,10 +170,18 @@ export default function App() {
                   {size}평
                 </button>
               ))}
+              <div className="room-type-options" role="group" aria-label="방 구조 선택">
+                {['A', 'B'].map(type => <button key={type} aria-pressed={roomType === type} onClick={() => changeRoomSize(roomSize, type)}>{type}형</button>)}
+              </div>
+            </div>
+            <div className="room-options-row floor-options" role="group" aria-label="바닥 색 선택">
+              <span className="option-label">바닥</span>
+              {[['wood', '우드'], ['black', '검정'], ['white', '흰색']].map(([value, label]) => <button key={value} aria-pressed={floorColor === value} aria-label={`${label} 바닥`} onClick={() => setFloorColor(value)}><span className={`floor-swatch floor-${value}`} />{label}</button>)}
+              <span className="layout-description">{roomType === 'A' ? 'A · 세로형 / ㄱ자 주방' : 'B · 가로형 / 일자 주방'}</span>
             </div>
           </header>
 
-          <RoomPlan room={roomDim} items={placedItems} selectedId={selectedId} onSelect={setSelectedId} onChange={updateItem} onDelete={handleDeleteItem} onRotate={rotateItem} />
+          <RoomPlan room={roomDim} floorColor={floorColor} items={placedItems} selectedId={selectedId} onSelect={setSelectedId} onChange={updateItem} onDelete={handleDeleteItem} onRotate={rotateItem} />
 
           <div 
             className="bg-[#FF6B6B] text-white text-xs font-bold py-2.5 px-4 text-center cursor-pointer flex items-center justify-center gap-2 z-30 shadow-md hover:bg-[#fa5a5a] transition-colors"

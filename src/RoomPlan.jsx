@@ -1,9 +1,32 @@
 import React, { useRef } from 'react';
 import { RotateCw, Trash2, Check } from 'lucide-react';
 import { constrainItem, footprint } from './roomGeometry';
+import RoomFixtures from './RoomFixtures';
 
 export function FurnitureShape({ item }) {
   const { width: w, height: h, id } = item;
+  if (id === 'plant') return <g>
+    <circle cx={w / 2} cy={h / 2} r="16" fill="#ba8a65" stroke="#916441" strokeWidth="2" />
+    <circle cx={w / 2} cy={h / 2} r="12" fill="#60513d" />
+    {[0, 60, 120, 180, 240, 300].map((angle, i) => <ellipse key={angle} cx={w / 2} cy="12" rx="6" ry="12" fill={i % 2 ? '#6f9160' : '#3d7356'} transform={`rotate(${angle} ${w / 2} ${h / 2})`} />)}
+    <circle cx={w / 2} cy={h / 2} r="5" fill="#a0b67b" />
+  </g>;
+  if (id === 'dresser') return <g>
+    <rect x="1" y="1" width={w - 2} height={h - 2} rx="2" fill="#c2a27b" stroke="#927453" strokeWidth="2" />
+    <rect x="4" y="4" width={w - 8} height={h - 11} fill="#e0c4a0" />
+    <path d={`M4 ${h - 7}H${w - 4} M${w / 2} ${h - 7}v6`} stroke="#8c7254" />
+    <path d={`M12 ${h - 4}h15 M${w - 27} ${h - 4}h15`} stroke="#695c49" strokeWidth="2" />
+  </g>;
+  if (id === 'bookshelf') return <g>
+    <rect width={w} height={h} rx="2" fill="#a98b67" stroke="#816b51" strokeWidth="2" />
+    <rect x="4" y="4" width={w - 8} height={h - 6} fill="#e5d7c0" />
+    {['#7e9e9d', '#c7a27e', '#d3c6a7', '#889ba7', '#b2bca0', '#b48170'].map((color, i) => <rect key={color} x={8 + i * 10} y="6" width="8" height={h - 9} fill={color} stroke="#fff" strokeWidth=".5" />)}
+  </g>;
+  if (id === 'coffee_table') return <g>
+    <rect x="1" y="1" width={w - 2} height={h - 2} rx="19" fill="#dfc7a2" stroke="#ad906d" strokeWidth="2" />
+    <rect x="17" y="12" width="22" height="25" rx="1" fill="#f3ede1" transform="rotate(-8 28 24)" />
+    <circle cx="58" cy="27" r="7" fill="#f9f8f0" stroke="#c3ae8c" /><circle cx="58" cy="27" r="4" fill="#8c6650" />
+  </g>;
   if (id === 'bed' || id === 'omons_bed') return <g>
     <rect width={w} height={h} rx="5" fill="#9b8066" />
     <rect x="4" y="9" width={w - 8} height={h - 14} rx="8" fill="#f9f7f2" stroke="#d4d1c9" strokeWidth="2" />
@@ -39,10 +62,13 @@ export function FurnitureShape({ item }) {
   </g>;
 }
 
-export default function RoomPlan({ room, items, selectedId, onSelect, onChange, onDelete, onRotate }) {
+export default function RoomPlan({ room, floorColor, items, selectedId, onSelect, onChange, onDelete, onRotate }) {
   const svgRef = useRef(null);
   const drag = useRef(null);
   const { width: w, height: h } = room;
+  const doorX = room.type === 'B' ? w - 120 : 40;
+  const windowX = room.type === 'B' ? 0 : w;
+  const floorPalette = { wood: ['#e9dfcf', '#d9cdbb', '#f6f0e6'], black: ['#272b2d', '#373c3f', '#464b4e'], white: ['#f5f5f1', '#e1e3de', '#ffffff'] }[floorColor || 'wood'];
   const selected = items.find(item => item.uid === selectedId);
   const point = e => new DOMPoint(e.clientX, e.clientY).matrixTransform(svgRef.current.getScreenCTM().inverse());
   const move = e => {
@@ -55,34 +81,19 @@ export default function RoomPlan({ room, items, selectedId, onSelect, onChange, 
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
   };
   return <section className="plan-stage" aria-label="2D 방꾸미기">
-    <div className="plan-caption"><span>MY ROOM <b>· 2D 평면도</b></span><span>화장실 포함 · 가구 실측 비율</span></div>
+    <div className="plan-caption"><span>MY ROOM <b>· {room.type}형 · 2D</b></span><span>화장실 포함 · 가구 실측 비율</span></div>
     <div className="plan-canvas" onPointerDown={() => onSelect(null)}>
       <svg ref={svgRef} viewBox={`-24 -24 ${w + 48} ${h + 70}`} aria-label="주방과 화장실이 있는 원룸 평면도" onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={() => { drag.current = null; }}>
         <defs>
-          <pattern id="wood" width="44" height="170" patternUnits="userSpaceOnUse"><rect width="44" height="170" fill="#e9dfcf" /><path d="M0 0V170 M22 0V170 M0 75H22 M22 130H44" stroke="#d9cdbb" strokeWidth=".8" /><path d="M5 0V170 M14 0V170 M29 0V170 M37 0V170" stroke="#f6f0e6" opacity=".6" strokeWidth="1" /></pattern>
+          <pattern id="wood" width="44" height="170" patternUnits="userSpaceOnUse"><rect width="44" height="170" fill={floorPalette[0]} /><path d="M0 0V170 M22 0V170 M0 75H22 M22 130H44" stroke={floorPalette[1]} strokeWidth=".8" /><path d="M5 0V170 M14 0V170 M29 0V170 M37 0V170" stroke={floorPalette[2]} opacity=".6" strokeWidth="1" /></pattern>
           <pattern id="tile" width="25" height="25" patternUnits="userSpaceOnUse"><rect width="25" height="25" fill="#eef0ed" /><path d="M0 25V0H25" fill="none" stroke="#d4dbd8" strokeWidth="1" /></pattern>
           <filter id="furniture-shadow" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="#40372c" floodOpacity=".22" /></filter>
         </defs>
         <rect width={w} height={h} fill="url(#wood)" />
-        {/* Built-in kitchen */}
-        <g filter="url(#furniture-shadow)">
-          <rect x="8" y="8" width={w - 156} height="50" fill="#f7f5ef" stroke="#c1bbaf" strokeWidth="2" />
-          <rect x="9" y="9" width="49" height="48" fill="#e4e5e0" stroke="#babcb7" /><path d="M13 48H54" stroke="#9fa39d" strokeWidth="3" />
-          <rect x="70" y="16" width="45" height="32" rx="4" fill="#a7aaa4" /><rect x="75" y="20" width="34" height="24" rx="4" fill="#bfc4bd" /><path d="M90 13v12h7" fill="none" stroke="#7f8984" strokeWidth="3" />
-          <rect x={w - 206} y="17" width="41" height="31" rx="2" fill="#333b3b" /><circle cx={w - 195} cy="27" r="6" fill="none" stroke="#858c88" /><circle cx={w - 177} cy="38" r="7" fill="none" stroke="#858c88" />
-        </g>
-        {/* Bathroom, drawn to the same centimeter scale */}
-        <rect x={w - 140} width="140" height="160" fill="url(#tile)" />
-        <rect x={w - 130} y="10" width="73" height="70" rx="3" fill="#fafdfc" stroke="#baccc9" strokeWidth="2" /><circle cx={w - 95} cy="45" r="4" fill="#acb7b3" /><path d={`M${w - 119} 18h28v12`} fill="none" stroke="#8c9a96" strokeWidth="3" />
-        <rect x={w - 46} y="13" width="34" height="39" rx="4" fill="#fff" stroke="#bac2bd" /><ellipse cx={w - 29} cy="34" rx="12" ry="11" fill="#e2e9e5" /><circle cx={w - 29} cy="19" r="3" fill="#99aaa3" />
-        <rect x={w - 42} y="91" width="30" height="17" rx="3" fill="#fff" stroke="#c3cbc6" /><ellipse cx={w - 27} cy="120" rx="17" ry="22" fill="#fff" stroke="#c3cbc6" strokeWidth="2" /><ellipse cx={w - 27} cy="119" rx="10" ry="14" fill="#e5ebe7" />
-        <text x={w - 92} y="110" textAnchor="middle" fill="#7f8d87" fontSize="12">화장실</text>
-        <path d={`M${w - 140} 0V160h18 M${w - 47} 160H${w}`} fill="none" stroke="#4c4d49" strokeWidth="9" />
-        <path d={`M${w - 122} 160v75 M${w - 122} 235 A75 75 0 0 0 ${w - 47} 160`} fill="none" stroke="#8a8d83" strokeWidth="1.5" />
-        {/* Outer wall, window, and entry door */}
-        <path d={`M40 ${h}H0V0H${w}V${h}H120`} fill="none" stroke="#484944" strokeWidth="12" strokeLinejoin="miter" />
-        <path d={`M40 ${h}v-80 M40 ${h - 80}A80 80 0 0 1 120 ${h}`} fill="none" stroke="#8a8d83" strokeWidth="1.5" />
-        <rect x={w - 4} y={h * .45} width="8" height={h * .27} fill="#d5e8e8" stroke="#a1b9b9" /><path d={`M${w} ${h * .45}v${h * .27}`} stroke="#fff" strokeWidth="2" />
+        <RoomFixtures room={room} />
+        <path d={`M${doorX} ${h}H0V0H${w}V${h}H${doorX + 80}`} fill="none" stroke="#484944" strokeWidth="12" strokeLinejoin="miter" />
+        <path d={`M${doorX} ${h}v-80 M${doorX} ${h - 80}A80 80 0 0 1 ${doorX + 80} ${h}`} fill="none" stroke="#9da39a" strokeWidth="1.5" />
+        <rect x={windowX - 4} y={h * .48} width="8" height={h * .27} fill="#d5e8e8" stroke="#a1b9b9" /><path d={`M${windowX} ${h * .48}v${h * .27}`} stroke="#fff" strokeWidth="2" />
         <text x={w / 2} y={h + 27} textAnchor="middle" fill="#919a9d" fontSize="11">{(w / 100).toFixed(2)} m × {(h / 100).toFixed(2)} m</text>
         {[...items].sort((a, b) => (a.id === 'rug' ? 0 : 1) - (b.id === 'rug' ? 0 : 1)).map(item => {
           const active = selectedId === item.uid;
