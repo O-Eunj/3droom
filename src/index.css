@@ -53,3 +53,22 @@ button:focus-visible, a:focus-visible { outline: 2px solid #18abd3; outline-offs
   .app-shell { height: auto; min-height: 100dvh; overflow: auto; }
   .plan-stage { height: 340px; flex: none; }
 }
+
+.floor-options > .story-button { margin-left:auto; color:#149ebf; font-weight:700; background:#effbff; }
+.plan-canvas { display:block; overflow:auto; padding:0; overscroll-behavior:contain; }
+.plan-zoom-content { min-width:100%; min-height:100%; }
+.plan-canvas svg { display:block; overflow:hidden; }
+.zoom-controls { display:flex; justify-content:flex-end; gap:4px; margin:6px 0; }
+.zoom-controls button { background:white; border:1px solid #dce4e7; border-radius:6px; padding:3px 9px; font-size:11px; color:#52656e; }
+.zoom-controls button:disabled { opacity:.35; }
+.editor-notice { background:#e5f7fb; color:#246475; font-size:11px; padding:8px 16px; }
+.story-content { text-align:left; font-size:13px; color:#52656e; line-height:1.7; }
+.story-content h4 { font-weight:700; margin:16px 0 8px; color:#263e48; }
+.story-content ul { padding-left:18px; list-style:disc; }
+.story-content li { margin:7px 0; }
+.story-close { width:100%; background:#35bddc; color:white; border-radius:10px; padding:10px; margin-top:16px; font-weight:700; }
+.furniture-panel { height:220px; }
+@media (max-height:740px) { .furniture-panel { height:215px; } }
+
+.plan-canvas svg { touch-action:pan-x pan-y; }
+[role="dialog"] { position:fixed; overflow-y:auto; }

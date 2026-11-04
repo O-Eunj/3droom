@@ -36,14 +36,13 @@ export default function RoomFixtures({ room }) {
     const { width: w, height: h } = room;
     const bx = bathroom.x, by = bathroom.y;
     return <>
-      <rect x="152" y="8" width={w * .87 - 152} height="60" fill="#f7f5ef" stroke="#b9bdb5" />
       {kitchen.map(item => <g key={item.id} transform={`translate(${item.x} ${item.y})`}><ApplianceShape item={item} /></g>)}
       <rect {...entry} fill="url(#entry-tile)" />
       <text x={entry.x + entry.width / 2} y={entry.y + entry.height / 2} textAnchor="middle" fontSize="11" fill="#7c888c">현관</text>
       <rect {...closet} fill="#f6f5ef" stroke="#4c4d49" strokeWidth="5" />
       <text x={closet.x + closet.width / 2} y={closet.y + closet.height / 2} textAnchor="middle" fontSize="9" fill="#92958a" transform={`rotate(-90 ${closet.x + closet.width / 2} ${closet.y + closet.height / 2})`}>수납장</text>
-      <path d={`M${bx} ${by}H${w * .93}V${h * .85}H${w * .81}V${h}H${bx}Z`} fill="#e7f1f2" />
-      <path d={`M${bx} ${h}V${by}H${bx + 60} M${bx + 120} ${by}H${w * .93}`} stroke="#4c4d49" fill="none" strokeWidth="5" />
+      <path d={`M${bx} ${by}H${w - 40}V${h - 50}H${w - 110}V${h}H${bx}Z`} fill="#e7f1f2" />
+      <path d={`M${bx} ${h}V${by}H${bx + 60} M${bx + 120} ${by}H${w - 40}`} stroke="#4c4d49" fill="none" strokeWidth="5" />
       <ellipse cx={bx + 28} cy={by + 38} rx="19" ry="17" fill="#fff" stroke="#a5b6b6" strokeWidth="2" />
       <circle cx={bx + 28} cy={by + 38} r="12" fill="#edf3f1" stroke="#bdc9c5" /><circle cx={bx + 26} cy={by + 32} r="2" fill="#7f9690" />
       <rect x={bx + 10} y={h - 47} width="15" height="32" fill="#fff" stroke="#b7c4c2" /><ellipse cx={bx + 37} cy={h - 31} rx="20" ry="14" fill="#fff" stroke="#b7c4c2" />

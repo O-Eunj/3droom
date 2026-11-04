@@ -15,8 +15,8 @@ export const CATALOG_ITEMS = [
 
 export function roomDimensions(size, type = 'A') {
   const ratio = type === 'B' ? .48 : 1.18;
-  const areaFactor = type === 'B' ? .9505 : 1;
-  const width = Math.sqrt(size * 3.3058 / (ratio * areaFactor)) * 100;
+  const notchArea = type === 'B' ? 9900 : 0;
+  const width = Math.sqrt((size * 3.3058 * 10000 + notchArea) / ratio);
   return { width, height: width * ratio, type };
 }
 
@@ -30,19 +30,18 @@ export const KITCHEN_ITEMS = [
 export function roomLayout(room) {
   const { width: w, height: h } = room;
   const isB = room.type === 'B';
-  const bathroom = isB ? { x: w * .6, y: h * .55, width: w * .33, height: h * .45 } : { x: w - 140, y: 0, width: 140, height: 160 };
+  const bathroom = isB ? { x: w - 240, y: h - 160, width: 200, height: 160 } : { x: w - 140, y: 0, width: 140, height: 160 };
   const kitchen = KITCHEN_ITEMS.filter(item => ['sink', 'induction'].includes(item.id)).map((item, i) => ({
-    ...item, x: isB ? w * .54 + (i ? 80 : 0) : (i ? 156 : 76), y: 8, rotation: 0,
+    ...item, x: isB ? w - 310 + (i ? 80 : 0) : (i ? 156 : 76), y: 8, rotation: 0,
     boundsWidth: item.width, boundsHeight: item.height,
   }));
-  const entry = isB ? { x: w * .87, y: 60, width: w * .13, height: h * .55 - 60 } : null;
-  const closet = isB ? { x: w * .53, y: h * .55, width: w * .07, height: h * .45 } : null;
+  const entry = isB ? { x: w - 90, y: 68, width: 90, height: h - 228 } : null;
+  const closet = isB ? { x: w - 285, y: h - 160, width: 45, height: 160 } : null;
   const obstacles = isB ? [
-    { x: w * .53, y: h * .55, width: w * .47, height: h * .45 }, entry,
-    { x: 152, y: 8, width: w * .87 - 152, height: 60 },
+    { x: w - 285, y: h - 160, width: 285, height: 160 }, entry,
   ] : [bathroom];
   obstacles.push(...kitchen.map(item => ({ x: item.x, y: item.y, width: item.width, height: item.height })));
-  const outline = isB ? `M0 0H${w}V${h * .55}H${w * .93}V${h * .85}H${w * .81}V${h}H0Z` : `M0 0H${w}V${h}H0Z`;
+  const outline = isB ? `M0 0H${w}V${h - 160}H${w - 40}V${h - 50}H${w - 110}V${h}H0Z` : `M0 0H${w}V${h}H0Z`;
   return { bathroom, kitchen, entry, closet, obstacles, outline };
 }
 
@@ -56,7 +55,7 @@ export function defaultAppliances(room) {
 }
 
 export function placementObstacles(item, room, peers = []) {
-  return [...roomLayout(room).obstacles, ...peers.filter(peer => peer.uid !== item.uid && (peer.protected || item.protected)).map(peer => {
+  return [...roomLayout(room).obstacles, ...peers.filter(peer => peer.uid !== item.uid && !['rug', 'luxury_rug'].includes(peer.id) && !['rug', 'luxury_rug'].includes(item.id)).map(peer => {
     const bounds = footprint(peer);
     return { x: peer.x - bounds.width / 2, y: peer.y - bounds.height / 2, ...bounds };
   })];
