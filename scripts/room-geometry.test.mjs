@@ -3,10 +3,12 @@ import { CATALOG_ITEMS, roomDimensions, roomLayout, defaultAppliances, constrain
 let cases = 0;
 for (const type of ['A', 'B']) for (const size of [5, 7, 10]) {
   const room = roomDimensions(size, type);
-  assert.ok(Math.abs(room.width * room.height * (type === 'B' ? .9505 : 1) / 10000 - size * 3.3058) < .001);
+  assert.ok(Math.abs((room.width * room.height - (type === 'B' ? 9900 : 0)) / 10000 - size * 3.3058) < .001);
   const { kitchen, bathroom, entry } = roomLayout(room);
   assert.deepEqual(kitchen.map(item => item.id), ['sink', 'induction']);
-  if (type === 'B') { assert.ok(bathroom.x > room.width / 2 && bathroom.y > room.height / 2); assert.ok(entry.x > bathroom.x); }
+  if (type === 'B') { assert.ok(bathroom.x > room.width / 2 && bathroom.y === room.height - 160); assert.ok(entry.x > bathroom.x); }
+  assert.equal(bathroom.width, type === 'B' ? 200 : 140);
+  assert.equal(bathroom.height, 160);
   const appliances = defaultAppliances(room);
   assert.deepEqual(appliances.map(item => item.id), ['fridge', 'washer']);
   for (const appliance of appliances) {
@@ -30,3 +32,16 @@ for (const type of ['A', 'B']) for (const size of [5, 7, 10]) {
   }
 }
 console.log(`Passed ${cases} placement cases, required appliance movement/rotation and fridge access checks.`);
+
+const room = roomDimensions(10, 'A');
+const desk = {...CATALOG_ITEMS.find(i => i.id === 'desk'), uid:'desk', rotation:0, x:240, y:350};
+const other = {...desk, uid:'other'};
+assert.equal(isValidPosition(other, room, [desk]), false, 'Furniture overlap blocked');
+const moved = constrainItem(other, room, [desk]);
+assert.ok(moved && isValidPosition(moved, room, [desk]));
+const rug = {...CATALOG_ITEMS.find(i => i.id === 'rug'), uid:'rug', rotation:0, x:240,y:350};
+assert.ok(isValidPosition(rug, room, [desk]), 'Rug may overlap furniture');
+assert.ok(isValidPosition(desk, room, [rug]), 'Furniture may overlap rug');
+const filled = [{...desk, uid:'huge',width:room.width,height:room.height,x:room.width/2,y:room.height/2}];
+assert.equal(constrainItem(other,room,filled),null,'Full room rejects placement');
+console.log('Passed fixed bathroom dimensions, furniture overlap and rug exceptions.');
