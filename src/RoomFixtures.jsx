@@ -1,12 +1,7 @@
 import React from 'react';
 import { roomLayout } from './roomGeometry';
 
-export default function RoomFixtures({ room }) {
-  const { kitchen, bathroom } = roomLayout(room);
-  return <>
-    {kitchen.map(item => <g key={item.id} role="img" aria-label={`${item.name} ${item.width} × ${item.height} cm`}
-      transform={item.rotation ? `translate(${item.x + item.height} ${item.y}) rotate(90)` : `translate(${item.x} ${item.y})`}>
-      <title>{item.name} · {item.width} × {item.height} cm</title>
+export function ApplianceShape({ item }) { return <g>      <title>{item.name} · {item.width} × {item.height} cm</title>
       <rect width={item.width} height={item.height} rx="2" fill="#f4f3ed" stroke="#a4a8a1" strokeWidth="1.5" />
       {item.id === 'fridge' && <>
         <rect x="3" y="3" width="54" height="61" rx="2" fill="#dfe4e2" stroke="#c5cecb" />
@@ -33,6 +28,35 @@ export default function RoomFixtures({ room }) {
         <ellipse cx="30" cy="32" rx="14" ry="11" fill="#e2edeb" opacity=".8" />
       </>}
       <text x={item.width / 2} y={item.id === 'fridge' ? 48 : 56} textAnchor="middle" fill="#566861" fontSize="7.5">{item.name}</text>
+</g>; }
+
+export default function RoomFixtures({ room }) {
+  const { kitchen, bathroom, entry, closet } = roomLayout(room);
+  if (room.type === 'B') {
+    const { width: w, height: h } = room;
+    const bx = bathroom.x, by = bathroom.y;
+    return <>
+      <rect x="152" y="8" width={w * .87 - 152} height="60" fill="#f7f5ef" stroke="#b9bdb5" />
+      {kitchen.map(item => <g key={item.id} transform={`translate(${item.x} ${item.y})`}><ApplianceShape item={item} /></g>)}
+      <rect {...entry} fill="url(#entry-tile)" />
+      <text x={entry.x + entry.width / 2} y={entry.y + entry.height / 2} textAnchor="middle" fontSize="11" fill="#7c888c">현관</text>
+      <rect {...closet} fill="#f6f5ef" stroke="#4c4d49" strokeWidth="5" />
+      <text x={closet.x + closet.width / 2} y={closet.y + closet.height / 2} textAnchor="middle" fontSize="9" fill="#92958a" transform={`rotate(-90 ${closet.x + closet.width / 2} ${closet.y + closet.height / 2})`}>수납장</text>
+      <path d={`M${bx} ${by}H${w * .93}V${h * .85}H${w * .81}V${h}H${bx}Z`} fill="#e7f1f2" />
+      <path d={`M${bx} ${h}V${by}H${bx + 60} M${bx + 120} ${by}H${w * .93}`} stroke="#4c4d49" fill="none" strokeWidth="5" />
+      <ellipse cx={bx + 28} cy={by + 38} rx="19" ry="17" fill="#fff" stroke="#a5b6b6" strokeWidth="2" />
+      <circle cx={bx + 28} cy={by + 38} r="12" fill="#edf3f1" stroke="#bdc9c5" /><circle cx={bx + 26} cy={by + 32} r="2" fill="#7f9690" />
+      <rect x={bx + 10} y={h - 47} width="15" height="32" fill="#fff" stroke="#b7c4c2" /><ellipse cx={bx + 37} cy={h - 31} rx="20" ry="14" fill="#fff" stroke="#b7c4c2" />
+      <path d={`M${bx + 120} ${by}v60 M${bx + 120} ${by + 60}A60 60 0 0 1 ${bx + 60} ${by}`} stroke="#97abaa" fill="none" strokeWidth="1.5" />
+      <text x={bx + 85} y={h - 24} textAnchor="middle" fontSize="11" fill="#819796">화장실</text>
+      <text x={w * .59} y="85" fontSize="11" fill="#818373">주방 / 식당</text>
+      <text x={w * .25} y={h * .52} textAnchor="middle" fontSize="13" fill="#91958a" opacity=".8">거실 / 침실</text>
+    </>;
+  }
+  return <>
+    {kitchen.map(item => <g key={item.id} role="img" aria-label={`${item.name} ${item.width} × ${item.height} cm`}
+      transform={item.rotation ? `translate(${item.x + item.height} ${item.y}) rotate(90)` : `translate(${item.x} ${item.y})`}>
+      <ApplianceShape item={item} />
     </g>)}
     <g transform={`translate(${bathroom.x} 0)`}>
       <rect width="140" height="160" fill="url(#tile)" />

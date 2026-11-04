@@ -1,10 +1,11 @@
 import React, { useRef } from 'react';
 import { RotateCw, Trash2, Check } from 'lucide-react';
-import { constrainItem, footprint } from './roomGeometry';
-import RoomFixtures from './RoomFixtures';
+import { footprint, roomLayout } from './roomGeometry';
+import RoomFixtures, { ApplianceShape } from './RoomFixtures';
 
 export function FurnitureShape({ item }) {
   const { width: w, height: h, id } = item;
+  if (id === 'fridge' || id === 'washer') return <ApplianceShape item={item} />;
   if (id === 'plant') return <g>
     <circle cx={w / 2} cy={h / 2} r="16" fill="#ba8a65" stroke="#916441" strokeWidth="2" />
     <circle cx={w / 2} cy={h / 2} r="12" fill="#60513d" />
@@ -66,6 +67,7 @@ export default function RoomPlan({ room, floorColor, items, selectedId, onSelect
   const svgRef = useRef(null);
   const drag = useRef(null);
   const { width: w, height: h } = room;
+  const { outline } = roomLayout(room);
   const doorX = room.type === 'B' ? w - 120 : 40;
   const windowX = room.type === 'B' ? 0 : w;
   const floorPalette = { wood: ['#e9dfcf', '#d9cdbb', '#f6f0e6'], black: ['#272b2d', '#373c3f', '#464b4e'], white: ['#f5f5f1', '#e1e3de', '#ffffff'] }[floorColor || 'wood'];
@@ -74,7 +76,7 @@ export default function RoomPlan({ room, floorColor, items, selectedId, onSelect
   const move = e => {
     if (!drag.current) return;
     const p = point(e);
-    onChange(constrainItem({ ...drag.current.item, x: p.x - drag.current.dx, y: p.y - drag.current.dy }, room));
+    onChange({ ...drag.current.item, x: p.x - drag.current.dx, y: p.y - drag.current.dy });
   };
   const finish = e => {
     drag.current = null;
@@ -83,16 +85,23 @@ export default function RoomPlan({ room, floorColor, items, selectedId, onSelect
   return <section className="plan-stage" aria-label="2D 방꾸미기">
     <div className="plan-caption"><span>MY ROOM <b>· {room.type}형 · 2D</b></span><span>화장실 포함 · 가구 실측 비율</span></div>
     <div className="plan-canvas" onPointerDown={() => onSelect(null)}>
-      <svg ref={svgRef} viewBox={`-24 -24 ${w + 48} ${h + 70}`} aria-label="주방과 화장실이 있는 원룸 평면도" onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={() => { drag.current = null; }}>
+      <svg ref={svgRef} viewBox={`-24 -24 ${w + (room.type === 'B' ? 105 : 48)} ${h + 70}`} aria-label="주방과 화장실이 있는 원룸 평면도" onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={() => { drag.current = null; }}>
         <defs>
+          <pattern id="entry-tile" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#f7f8f7" /><path d="M0 0h10v10H0z M10 10h10v10H10z" fill="#e3e6e5" /></pattern>
           <pattern id="wood" width="44" height="170" patternUnits="userSpaceOnUse"><rect width="44" height="170" fill={floorPalette[0]} /><path d="M0 0V170 M22 0V170 M0 75H22 M22 130H44" stroke={floorPalette[1]} strokeWidth=".8" /><path d="M5 0V170 M14 0V170 M29 0V170 M37 0V170" stroke={floorPalette[2]} opacity=".6" strokeWidth="1" /></pattern>
           <pattern id="tile" width="25" height="25" patternUnits="userSpaceOnUse"><rect width="25" height="25" fill="#eef0ed" /><path d="M0 25V0H25" fill="none" stroke="#d4dbd8" strokeWidth="1" /></pattern>
           <filter id="furniture-shadow" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="#40372c" floodOpacity=".22" /></filter>
         </defs>
-        <rect width={w} height={h} fill="url(#wood)" />
+        <path d={outline} fill="url(#wood)" />
         <RoomFixtures room={room} />
-        <path d={`M${doorX} ${h}H0V0H${w}V${h}H${doorX + 80}`} fill="none" stroke="#484944" strokeWidth="12" strokeLinejoin="miter" />
-        <path d={`M${doorX} ${h}v-80 M${doorX} ${h - 80}A80 80 0 0 1 ${doorX + 80} ${h}`} fill="none" stroke="#9da39a" strokeWidth="1.5" />
+        {room.type === 'B' ? <>
+          <path d={outline} fill="none" stroke="#484944" strokeWidth="8" />
+          <path d={`M${w} ${h * .29}V${h * .49}`} stroke="#f6f7f6" strokeWidth="9" />
+          <path d={`M${w} ${h * .29}h${h * .2} M${w + h * .2} ${h * .29}A${h * .2} ${h * .2} 0 0 1 ${w} ${h * .49}`} fill="none" stroke="#9da39a" strokeWidth="1.5" />
+        </> : <>
+          <path d={`M${doorX} ${h}H0V0H${w}V${h}H${doorX + 80}`} fill="none" stroke="#484944" strokeWidth="12" />
+          <path d={`M${doorX} ${h}v-80 M${doorX} ${h - 80}A80 80 0 0 1 ${doorX + 80} ${h}`} fill="none" stroke="#9da39a" strokeWidth="1.5" />
+        </>}
         <rect x={windowX - 4} y={h * .48} width="8" height={h * .27} fill="#d5e8e8" stroke="#a1b9b9" /><path d={`M${windowX} ${h * .48}v${h * .27}`} stroke="#fff" strokeWidth="2" />
         <text x={w / 2} y={h + 27} textAnchor="middle" fill="#919a9d" fontSize="11">{(w / 100).toFixed(2)} m × {(h / 100).toFixed(2)} m</text>
         {[...items].sort((a, b) => (a.id === 'rug' ? 0 : 1) - (b.id === 'rug' ? 0 : 1)).map(item => {
@@ -104,10 +113,10 @@ export default function RoomPlan({ room, floorColor, items, selectedId, onSelect
             onFocus={() => onSelect(item.uid)}
             onKeyDown={e => {
               if (e.key === 'Escape') { onSelect(null); e.currentTarget.blur(); }
-              if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); onDelete(item.uid); }
+              if (!item.protected && (e.key === 'Delete' || e.key === 'Backspace')) { e.preventDefault(); onDelete(item.uid); }
               if (e.key.toLowerCase() === 'r') { e.preventDefault(); onRotate(item.uid); }
               const delta = { ArrowLeft: [-5, 0], ArrowRight: [5, 0], ArrowUp: [0, -5], ArrowDown: [0, 5] }[e.key];
-              if (delta) { e.preventDefault(); onChange(constrainItem({ ...item, x: item.x + delta[0], y: item.y + delta[1] }, room)); }
+              if (delta) { e.preventDefault(); onChange({ ...item, x: item.x + delta[0], y: item.y + delta[1] }); }
             }}>
             <g transform={`rotate(${item.rotation}) translate(${-item.width / 2} ${-item.height / 2})`} filter={item.id === 'rug' ? undefined : 'url(#furniture-shadow)'}><FurnitureShape item={item} /></g>
             {active && <rect x={-bounds.width / 2 - 5} y={-bounds.height / 2 - 5} width={bounds.width + 10} height={bounds.height + 10} rx="5" fill="none" stroke="#20b8de" strokeWidth="2" strokeDasharray="6 4" pointerEvents="none" />}
@@ -116,7 +125,7 @@ export default function RoomPlan({ room, floorColor, items, selectedId, onSelect
       </svg>
     </div>
     <div className="selection-bar" aria-live="polite">
-      {selected ? <><span><b>{selected.name}</b><small>{selected.width} × {selected.height} cm · {selected.rotation}°</small></span><button onClick={() => onRotate(selected.uid)} aria-label="선택한 가구 90도 회전"><RotateCw size={17} /> 회전</button><button onClick={() => onDelete(selected.uid)} aria-label="선택한 가구 삭제"><Trash2 size={17} /></button><button onClick={() => onSelect(null)} aria-label="배치 완료"><Check size={18} /></button></> : <p>{items.length ? '가구를 누르면 이동 · 회전 · 삭제할 수 있어요' : '아래에서 가구를 골라 나만의 방을 꾸며보세요'}</p>}
+      {selected ? <><span><b>{selected.name}</b><small>{selected.width} × {selected.height} cm · {selected.protected ? '기본 설비 · 삭제 불가' : `${selected.rotation}°`}</small></span><button onClick={() => onRotate(selected.uid)} aria-label="선택한 가구 90도 회전"><RotateCw size={17} /> 회전</button>{!selected.protected && <button onClick={() => onDelete(selected.uid)} aria-label="선택한 가구 삭제"><Trash2 size={17} /></button>}<button onClick={() => onSelect(null)} aria-label="배치 완료"><Check size={18} /></button></> : <p>{items.length ? '가구를 눌러 이동 · 회전해 보세요' : '아래에서 가구를 골라 나만의 방을 꾸며보세요'}</p>}
     </div>
   </section>;
 }

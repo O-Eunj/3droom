@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import RoomPlan, { FurnitureShape } from './RoomPlan';
-import { CATALOG_ITEMS, roomDimensions, constrainItem } from './roomGeometry';
+import { CATALOG_ITEMS, roomDimensions, constrainItem, defaultAppliances } from './roomGeometry';
 import { ChevronLeft, Lock, Download, Quote, Check, Plus, Box, ChevronRight } from 'lucide-react';
 
 export default function App() {
@@ -9,7 +9,7 @@ export default function App() {
   const [roomType, setRoomType] = useState('A');
   const [floorColor, setFloorColor] = useState('wood');
   const [viewMode, setViewMode] = useState('2d');
-  const [placedItems, setPlacedItems] = useState([]);
+  const [placedItems, setPlacedItems] = useState(() => defaultAppliances(roomDimensions(7, 'A')));
   const [selectedId, setSelectedId] = useState(null);
   const dialogRef = useRef(null);
   const furnitureListRef = useRef(null);
@@ -27,20 +27,32 @@ export default function App() {
       ...catalogItem, uid: crypto.randomUUID(), rotation: 0,
       x: roomDim.width / 2 + (placedItems.length % 3) * 12,
       y: roomDim.height * .62 + (placedItems.length % 3) * 12,
-    }, roomDim);
+    }, roomDim, placedItems);
+    if (!newItem) return;
     setPlacedItems(items => [...items, newItem]);
     setSelectedId(null);
   };
 
-  const updateItem = updated => setPlacedItems(items => items.map(item => item.uid === updated.uid ? updated : item));
-  const rotateItem = uid => setPlacedItems(items => items.map(item => item.uid === uid ? constrainItem({ ...item, rotation: (item.rotation + 90) % 360 }, roomDim) : item));
+  const updateItem = updated => setPlacedItems(items => {
+    const next = constrainItem(updated, roomDim, items);
+    return next ? items.map(item => item.uid === next.uid ? next : item) : items;
+  });
+  const rotateItem = uid => setPlacedItems(items => items.map(item => item.uid === uid ? (constrainItem({ ...item, rotation: (item.rotation + 90) % 360 }, roomDim, items) || item) : item));
   const handleDeleteItem = uid => {
-    setPlacedItems(items => items.filter(item => item.uid !== uid));
+    setPlacedItems(items => items.filter(item => item.uid !== uid || item.protected));
     setSelectedId(null);
   };
   const changeRoomSize = (size, type = roomType) => {
     const nextRoom = roomDimensions(size, type);
-    setPlacedItems(items => items.map(item => constrainItem({ ...item, x: item.x * nextRoom.width / roomDim.width, y: item.y * nextRoom.height / roomDim.height }, nextRoom)));
+    const defaults = defaultAppliances(nextRoom);
+    const nextItems = [];
+    for (const item of [...placedItems].sort((a, b) => Number(Boolean(b.protected)) - Number(Boolean(a.protected)))) {
+      const initial = type !== roomType && item.protected ? defaults.find(entry => entry.uid === item.uid) : { ...item, x: item.x * nextRoom.width / roomDim.width, y: item.y * nextRoom.height / roomDim.height };
+      const next = constrainItem(initial, nextRoom, nextItems);
+      if (!next) return;
+      nextItems.push(next);
+    }
+    setPlacedItems(nextItems);
     setRoomSize(size);
     setRoomType(type);
   };
@@ -177,7 +189,7 @@ export default function App() {
             <div className="room-options-row floor-options" role="group" aria-label="바닥 색 선택">
               <span className="option-label">바닥</span>
               {[['wood', '우드'], ['black', '검정'], ['white', '흰색']].map(([value, label]) => <button key={value} aria-pressed={floorColor === value} aria-label={`${label} 바닥`} onClick={() => setFloorColor(value)}><span className={`floor-swatch floor-${value}`} />{label}</button>)}
-              <span className="layout-description">{roomType === 'A' ? 'A · 세로형 / ㄱ자 주방' : 'B · 가로형 / 일자 주방'}</span>
+              <span className="layout-description">{roomType === 'A' ? 'A · 세로형 / ㄱ자 주방' : 'B · 가로형 / 우측 현관'}</span>
             </div>
           </header>
 
@@ -194,7 +206,7 @@ export default function App() {
           <div className="furniture-panel bg-white border-t border-gray-200 flex flex-col z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
               <span className="font-bold text-gray-800 text-sm">가구 추가</span>
-              <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded-md">좌우 스와이프</span>
+
             </div>
             
             <div ref={furnitureListRef}
@@ -287,7 +299,7 @@ export default function App() {
           <button 
             onClick={() => {
               setStep('intro');
-              setPlacedItems([]);
+              setPlacedItems(defaultAppliances(roomDim));
             }}
             className="text-gray-400 hover:text-gray-600 font-medium text-sm py-2 mt-2"
           >

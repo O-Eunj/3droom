@@ -14,8 +14,9 @@ export const CATALOG_ITEMS = [
 ];
 
 export function roomDimensions(size, type = 'A') {
-  const ratio = type === 'B' ? .86 : 1.18;
-  const width = Math.sqrt(size * 3.3058 / ratio) * 100;
+  const ratio = type === 'B' ? .48 : 1.18;
+  const areaFactor = type === 'B' ? .9505 : 1;
+  const width = Math.sqrt(size * 3.3058 / (ratio * areaFactor)) * 100;
   return { width, height: width * ratio, type };
 }
 
@@ -27,32 +28,47 @@ export const KITCHEN_ITEMS = [
 ];
 
 export function roomLayout(room) {
+  const { width: w, height: h } = room;
   const isB = room.type === 'B';
-  const bathroom = { x: isB ? 0 : room.width - 140, y: 0, width: 140, height: 160 };
-  let offset = 0;
-  const kitchen = KITCHEN_ITEMS.map(item => {
-    const localX = !isB && item.id === 'washer' ? 0 : offset;
-    const localY = !isB && item.id === 'washer' ? 70 : 0;
-    offset += item.width;
-    return { ...item, rotation: isB ? 90 : 0,
-      x: isB ? room.width - 8 - item.height : 8 + localX,
-      y: isB ? 8 + localX : 8 + localY,
-      boundsWidth: isB ? item.height : item.width,
-      boundsHeight: isB ? item.width : item.height,
-    };
-  });
-  return { bathroom, kitchen, obstacles: [bathroom, ...kitchen.map(item => ({
-    x: item.x, y: item.y, width: item.boundsWidth, height: item.boundsHeight,
-  }))] };
+  const bathroom = isB ? { x: w * .6, y: h * .55, width: w * .33, height: h * .45 } : { x: w - 140, y: 0, width: 140, height: 160 };
+  const kitchen = KITCHEN_ITEMS.filter(item => ['sink', 'induction'].includes(item.id)).map((item, i) => ({
+    ...item, x: isB ? w * .54 + (i ? 80 : 0) : (i ? 156 : 76), y: 8, rotation: 0,
+    boundsWidth: item.width, boundsHeight: item.height,
+  }));
+  const entry = isB ? { x: w * .87, y: 60, width: w * .13, height: h * .55 - 60 } : null;
+  const closet = isB ? { x: w * .53, y: h * .55, width: w * .07, height: h * .45 } : null;
+  const obstacles = isB ? [
+    { x: w * .53, y: h * .55, width: w * .47, height: h * .45 }, entry,
+    { x: 152, y: 8, width: w * .87 - 152, height: 60 },
+  ] : [bathroom];
+  obstacles.push(...kitchen.map(item => ({ x: item.x, y: item.y, width: item.width, height: item.height })));
+  const outline = isB ? `M0 0H${w}V${h * .55}H${w * .93}V${h * .85}H${w * .81}V${h}H0Z` : `M0 0H${w}V${h}H0Z`;
+  return { bathroom, kitchen, entry, closet, obstacles, outline };
 }
 
-export function isValidPosition(item, room) {
+export function defaultAppliances(room) {
+  const fridge = KITCHEN_ITEMS.find(item => item.id === 'fridge');
+  const washer = KITCHEN_ITEMS.find(item => item.id === 'washer');
+  return [
+    { ...fridge, uid: 'required-fridge', protected: true, rotation: 0, x: 38, y: 43 },
+    { ...washer, uid: 'required-washer', protected: true, rotation: room.type === 'B' ? 0 : 270, x: room.type === 'B' ? 114 : 38, y: room.type === 'B' ? 38 : 230 },
+  ];
+}
+
+export function placementObstacles(item, room, peers = []) {
+  return [...roomLayout(room).obstacles, ...peers.filter(peer => peer.uid !== item.uid && (peer.protected || item.protected)).map(peer => {
+    const bounds = footprint(peer);
+    return { x: peer.x - bounds.width / 2, y: peer.y - bounds.height / 2, ...bounds };
+  })];
+}
+
+export function isValidPosition(item, room, peers = []) {
   const { width, height } = footprint(item);
   const left = item.x - width / 2, top = item.y - height / 2;
   const right = left + width, bottom = top + height;
   const epsilon = .00001;
   if (left < 8 - epsilon || top < 8 - epsilon || right > room.width - 8 + epsilon || bottom > room.height - 8 + epsilon) return false;
-  return roomLayout(room).obstacles.every(rect =>
+  return placementObstacles(item, room, peers).every(rect =>
     right <= rect.x - 8 + epsilon || left >= rect.x + rect.width + 8 - epsilon ||
     bottom <= rect.y - 8 + epsilon || top >= rect.y + rect.height + 8 - epsilon);
 }
@@ -63,16 +79,16 @@ export function footprint(item) {
     : { width: item.height, height: item.width };
 }
 
-export function constrainItem(item, room) {
+export function constrainItem(item, room, peers = []) {
   const { width: w, height: h } = footprint(item);
   const clampX = x => Math.max(w / 2 + 8, Math.min(room.width - w / 2 - 8, x));
   const clampY = y => Math.max(h / 2 + 8, Math.min(room.height - h / 2 - 8, y));
   const desired = { ...item, x: clampX(item.x), y: clampY(item.y) };
-  if (isValidPosition(desired, room)) return desired;
+  if (isValidPosition(desired, room, peers)) return desired;
   // The closest legal point lies on an obstacle or room boundary.
   const xs = [desired.x, clampX(0), clampX(room.width)];
   const ys = [desired.y, clampY(0), clampY(room.height)];
-  for (const rect of roomLayout(room).obstacles) {
+  for (const rect of placementObstacles(item, room, peers)) {
     xs.push(clampX(rect.x - 8 - w / 2), clampX(rect.x + rect.width + 8 + w / 2));
     ys.push(clampY(rect.y - 8 - h / 2), clampY(rect.y + rect.height + 8 + h / 2));
   }
@@ -80,8 +96,8 @@ export function constrainItem(item, room) {
   for (const x of xs) for (const y of ys) {
     const candidate = { ...item, x, y };
     const score = (x - desired.x) ** 2 + (y - desired.y) ** 2;
-    if (score < distance && isValidPosition(candidate, room)) { best = candidate; distance = score; }
+    if (score < distance && isValidPosition(candidate, room, peers)) { best = candidate; distance = score; }
   }
-  if (!best) throw new Error('이 가구를 배치할 공간이 없습니다.');
+  if (!best) return null;
   return best;
 }
